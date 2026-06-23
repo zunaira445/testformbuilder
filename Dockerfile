@@ -1,28 +1,17 @@
 FROM php:8.2-fpm
 
-# System dependencies install karna
 RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    libpng-dev \
-    libonig-dev \
-    libxml2-dev \
-    zip \
-    unzip \
-    libcurl4-openssl-dev \
-    libgd-dev \
-    libzip-dev
+    git curl libpng-dev libonig-dev libxml2-dev \
+    zip unzip libcurl4-openssl-dev libgd-dev libzip-dev \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
 
-# PHP extensions install karna
-RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
-
-# Composer install karna
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 COPY . .
 
-# Permissions set karna
+RUN composer install --optimize-autoloader --no-interaction
+
 RUN chown -R www-data:www-data /app/storage /app/bootstrap/cache
 
 EXPOSE 8000
