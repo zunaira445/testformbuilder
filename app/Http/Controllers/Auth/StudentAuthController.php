@@ -4,10 +4,13 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Mail\OtpMail;
+use App\Models\EmailOtpToken;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rules\Password;
 
 class StudentAuthController extends Controller
@@ -15,41 +18,47 @@ class StudentAuthController extends Controller
     public function showLogin()    { return view('auth.student-login'); }
     public function showRegister() { return view('auth.student-register'); }
 
+    // ── REGISTER ─────────────────────────────────────────────
     public function register(Request $request)
     {
         $request->validate([
             'name'     => 'required|string|max:255',
             'email'    => 'required|email|unique:users',
             'password' => [
-                'required',
-                'confirmed',
-                Password::min(8)
-                    ->mixedCase()   // requires upper + lower case
-                    ->numbers()     // requires at least one number
-                    ->symbols(),    // requires at least one symbol
+                'required', 'confirmed',
+                Password::min(8)->mixedCase()->numbers()->symbols(),
             ],
         ], [
-            'password.min'       => 'Password must be at least 8 characters.',
-            'password.mixed'     => 'Password must contain both uppercase and lowercase letters.',
-            'password.numbers'   => 'Password must contain at least one number.',
-            'password.symbols'   => 'Password must contain at least one special character (e.g. @, #, !, $).',
+            'password.min'     => 'Password must be at least 8 characters.',
+            'password.mixed'   => 'Password must contain both uppercase and lowercase letters.',
+            'password.numbers' => 'Password must contain at least one number.',
+            'password.symbols' => 'Password must contain at least one special character.',
         ]);
 
+        // User create karo (unverified)
         $user = User::create([
-            'name'        => $request->name,
-            'email'       => $request->email,
-            'password'    => Hash::make($request->password),
-            'role'        => 'student',
-            'phone'       => $request->phone,
-            'institution' => $request->institution,
-            'city'        => $request->city,
-            'roll_number' => $request->roll_number,
+            'name'              => $request->name,
+            'email'             => $request->email,
+            'password'          => Hash::make($request->password),
+            'role'              => 'student',
+            'phone'             => $request->phone,
+            'institution'       => $request->institution,
+            'city'              => $request->city,
+            'roll_number'       => $request->roll_number,
+            'is_email_verified' => false,
         ]);
 
-        Auth::login($user);
-        return redirect()->route('student.dashboard');
+        // OTP generate karo aur bhejo
+        $this->sendOtp($user->email);
+
+        // Session mein email store karo (verify screen ke liye)
+        session(['otp_email' => $user->email, 'otp_role' => 'student']);
+
+        return redirect()->route('otp.verify.form')
+            ->with('info', 'Aapke email par 6-digit OTP bheja gaya hai.');
     }
 
+    // ── LOGIN ─────────────────────────────────────────────────
     public function login(Request $request)
     {
         $request->validate([
@@ -58,14 +67,27 @@ class StudentAuthController extends Controller
         ]);
 
         if (Auth::attempt($request->only('email', 'password'), $request->boolean('remember'))) {
-            if (Auth::user()->role !== 'student') {
+            $user = Auth::user();
+
+            if ($user->role !== 'student') {
                 Auth::logout();
                 return back()->withErrors(['email' => 'Invalid credentials for student login.']);
             }
-            if (!Auth::user()->is_active) {
+
+            // Email verify check
+            if (!$user->is_email_verified) {
+                Auth::logout();
+                $this->sendOtp($user->email);
+                session(['otp_email' => $user->email, 'otp_role' => 'student']);
+                return redirect()->route('otp.verify.form')
+                    ->with('info', 'Pehle apna email verify karein. OTP bheja gaya hai.');
+            }
+
+            if (!$user->is_active) {
                 Auth::logout();
                 return back()->withErrors(['email' => 'Your account has been disabled. Contact support.']);
             }
+
             $request->session()->regenerate();
             return redirect()->route('student.dashboard');
         }
@@ -73,11 +95,30 @@ class StudentAuthController extends Controller
         return back()->withErrors(['email' => 'Email or password is incorrect.']);
     }
 
+    // ── LOGOUT ────────────────────────────────────────────────
     public function logout(Request $request)
     {
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         return redirect()->route('student.login');
+    }
+
+    // ── HELPER: OTP Send ──────────────────────────────────────
+    public static function sendOtp(string $email): void
+    {
+        // Purane OTPs delete karo
+        EmailOtpToken::where('email', $email)->delete();
+
+        $otp  = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $user = User::where('email', $email)->first();
+
+        EmailOtpToken::create([
+            'email'      => $email,
+            'otp'        => $otp,
+            'expires_at' => now()->addMinutes(10),
+        ]);
+
+        Mail::to($email)->send(new OtpMail($otp, $user?->name ?? 'User'));
     }
 }

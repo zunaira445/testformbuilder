@@ -1,35 +1,72 @@
 <?php
+// FILE PATH: app/Models/User.php
+
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable {
-    use HasFactory, Notifiable;
+class User extends Authenticatable
+{
+    use Notifiable;
 
     protected $fillable = [
-        'name','email','password','role','phone','institution',
-        'city','roll_number','is_active','dark_mode',
+        'name',
+        'email',
+        'password',
+        'role',
+        'phone',
+        'institution',
+        'city',
+        'roll_number',
+        'is_active',
+        'dark_mode',
+        'is_email_verified',
+        'is_payment_approved',
     ];
-    protected $hidden = ['password','remember_token'];
-    protected function casts(): array {
-        return ['email_verified_at'=>'datetime','password'=>'hashed'];
+
+    protected $hidden = ['password', 'remember_token'];
+
+    protected $casts = [
+        'email_verified_at'   => 'datetime',
+        'is_active'           => 'boolean',
+        'dark_mode'           => 'boolean',
+        'is_email_verified'   => 'boolean',
+        'is_payment_approved' => 'boolean',
+    ];
+
+    // ── Role Helpers ─────────────────────────────────────────
+    public function isStudent(): bool
+    {
+        return $this->role === 'student';
     }
 
-    public function tests() { return $this->hasMany(Test::class); }
-    public function attempts() { return $this->hasMany(TestAttempt::class); }
-    public function subscriptions() { return $this->hasMany(UserSubscription::class); }
-    public function payments() { return $this->hasMany(Payment::class); }
+    public function isInstructor(): bool
+    {
+        return $this->role === 'instructor';
+    }
 
-    public function activeSubscription() {
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    // ── Subscription ──────────────────────────────────────────
+    public function activeSubscription()
+    {
         return $this->hasOne(UserSubscription::class)
             ->where('is_active', true)
             ->where('expires_at', '>', now())
             ->latest();
     }
 
-    public function isAdmin()      { return $this->role === 'admin'; }
-    public function isInstructor() { return $this->role === 'instructor'; }
-    public function isStudent()    { return $this->role === 'student'; }
+    public function subscriptions()
+    {
+        return $this->hasMany(UserSubscription::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
 }
