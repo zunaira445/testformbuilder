@@ -5,6 +5,7 @@ namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable
 {
@@ -23,6 +24,7 @@ class User extends Authenticatable
         'dark_mode',
         'is_email_verified',
         'is_payment_approved',
+        'avatar',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -35,23 +37,23 @@ class User extends Authenticatable
         'is_payment_approved' => 'boolean',
     ];
 
-    // ── Role Helpers ─────────────────────────────────────────
-    public function isStudent(): bool
+    // ── Role Helpers ──────────────────────────────────────────
+    public function isStudent(): bool    { return $this->role === 'student'; }
+    public function isInstructor(): bool { return $this->role === 'instructor'; }
+    public function isAdmin(): bool      { return $this->role === 'admin'; }
+
+    // ── Avatar URL Helper ─────────────────────────────────────
+    public function avatarUrl(): string
     {
-        return $this->role === 'student';
+        if ($this->avatar && Storage::disk('public')->exists($this->avatar)) {
+            return Storage::url($this->avatar);
+        }
+        // Default: initials-based avatar via UI Avatars
+        return 'https://ui-avatars.com/api/?name=' . urlencode($this->name)
+            . '&background=1e40af&color=fff&size=128&bold=true&rounded=true';
     }
 
-    public function isInstructor(): bool
-    {
-        return $this->role === 'instructor';
-    }
-
-    public function isAdmin(): bool
-    {
-        return $this->role === 'admin';
-    }
-
-    // ── Subscription ──────────────────────────────────────────
+    // ── Relationships ─────────────────────────────────────────
     public function activeSubscription()
     {
         return $this->hasOne(UserSubscription::class)
