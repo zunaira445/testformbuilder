@@ -3,14 +3,13 @@
 
 namespace App\Mail;
 
-use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
-use Illuminate\Queue\SerializesModels;
+use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Envelope;
 
 class OtpMail extends Mailable
 {
-    use Queueable, SerializesModels;
-
+    // NOTE: No Queueable trait — sends IMMEDIATELY (within seconds)
     public string $otp;
     public string $userName;
 
@@ -20,10 +19,21 @@ class OtpMail extends Mailable
         $this->userName = $userName;
     }
 
-    public function build(): self
+    public function envelope(): Envelope
     {
-        return $this
-            ->subject('SWF Portal — Email Verification Code')
-            ->view('emails.otp');
+        return new Envelope(
+            subject: 'SWF Portal — Email Verification Code',
+        );
+    }
+
+    public function content(): Content
+    {
+        return new Content(
+            view: 'emails.otp',
+            with: [
+                'otp'      => $this->otp,
+                'userName' => $this->userName,
+            ],
+        );
     }
 }

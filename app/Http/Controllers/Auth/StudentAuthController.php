@@ -10,7 +10,6 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rules\Password;
 
@@ -19,7 +18,7 @@ class StudentAuthController extends Controller
     public function showLogin()    { return view('auth.student-login'); }
     public function showRegister() { return view('auth.student-register'); }
 
-    // ── REGISTER ─────────────────────────────────────────────
+    // ── REGISTER ──────────────────────────────────────────────
     public function register(Request $request)
     {
         $request->validate([
@@ -33,10 +32,9 @@ class StudentAuthController extends Controller
             'password.min'     => 'Password must be at least 8 characters.',
             'password.mixed'   => 'Password must contain both uppercase and lowercase letters.',
             'password.numbers' => 'Password must contain at least one number.',
-            'password.symbols' => 'Password must contain at least one special character.',
+            'password.symbols' => 'Password must contain at least one special character (e.g. @, #, !).',
         ]);
 
-        // User create karo (unverified)
         $user = User::create([
             'name'              => $request->name,
             'email'             => $request->email,
@@ -49,25 +47,16 @@ class StudentAuthController extends Controller
             'is_email_verified' => false,
         ]);
 
-        // OTP generate karo aur bhejo — IMMEDIATELY (no queue)
-        $sent = static::sendOtp($user->email);
+        // Send OTP immediately
+        self::sendOtp($user->email, $user->name);
 
-        if (!$sent) {
-            // OTP send fail hogi to user delete karo taake dobara register kar sake
-            $user->delete();
-            return back()
-                ->withInput()
-                ->withErrors(['email' => 'We could not send a verification email to this address. Please check the email and try again.']);
-        }
-
-        // Session mein email store karo (verify screen ke liye)
         session(['otp_email' => $user->email, 'otp_role' => 'student']);
 
         return redirect()->route('otp.verify.form')
-            ->with('info', 'A 6-digit verification code has been sent to your email address. Please check your inbox (and spam folder).');
+            ->with('info', 'A 6-digit verification code has been sent to your email. Please check your inbox.');
     }
 
-    // ── LOGIN ─────────────────────────────────────────────────
+    // ── LOGIN ──────────────────────────────────────────────────
     public function login(Request $request)
     {
         $request->validate([
@@ -80,16 +69,16 @@ class StudentAuthController extends Controller
 
             if ($user->role !== 'student') {
                 Auth::logout();
-                return back()->withErrors(['email' => 'These credentials are not valid for student login.']);
+                return back()->withErrors(['email' => 'Invalid credentials for student login.']);
             }
 
-            // Email verify check
+            // Email not verified — resend OTP and redirect
             if (!$user->is_email_verified) {
                 Auth::logout();
-                static::sendOtp($user->email);
+                self::sendOtp($user->email, $user->name);
                 session(['otp_email' => $user->email, 'otp_role' => 'student']);
                 return redirect()->route('otp.verify.form')
-                    ->with('info', 'Please verify your email first. A new verification code has been sent.');
+                    ->with('info', 'Please verify your email first. A new code has been sent to your inbox.');
             }
 
             if (!$user->is_active) {
@@ -113,32 +102,24 @@ class StudentAuthController extends Controller
         return redirect()->route('student.login');
     }
 
-    // ── HELPER: OTP Send — FIXED (returns bool for success check) ─
-    public static function sendOtp(string $email): bool
+    // ── SEND OTP (static, called by both auth controllers) ────
+    public static function sendOtp(string $email, string $name = 'User'): void
     {
-        try {
-            // Purane OTPs delete karo
-            EmailOtpToken::where('email', $email)->delete();
+        // Delete any old unused OTPs for this email
+        EmailOtpToken::where('email', $email)->delete();
 
-            // 6-digit OTP generate karo
-            $otp  = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-            $user = User::where('email', $email)->first();
+        // Generate 6-digit OTP
+        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
-            // DB mein save karo — expire in 5 minutes
-            EmailOtpToken::create([
-                'email'      => $email,
-                'otp'        => $otp,
-                'expires_at' => now()->addMinutes(5),
-            ]);
+        // Store with 5-minute expiry
+        EmailOtpToken::create([
+            'email'      => $email,
+            'otp'        => $otp,
+            'expires_at' => now()->addMinutes(5),
+            'used'       => false,
+        ]);
 
-            // Email IMMEDIATELY bhejo (no queue — connection: sync)
-            Mail::to($email)->send(new OtpMail($otp, $user?->name ?? 'User'));
-
-            return true;
-
-        } catch (\Exception $e) {
-            Log::error('OTP Mail Send Failed for ' . $email . ': ' . $e->getMessage());
-            return false;
-        }
+        // Send immediately (no queue)
+        Mail::to($email)->send(new OtpMail($otp, $name));
     }
 }
