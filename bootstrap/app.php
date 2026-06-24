@@ -1,4 +1,5 @@
 <?php
+// FILE PATH: bootstrap/app.php
 
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -11,12 +12,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Aapke existing aliases
         $middleware->alias([
-            'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'role'         => \App\Http\Middleware\RoleMiddleware::class,
+            // TASK 2: Subscription gate middleware registered here
+            'subscription' => \App\Http\Middleware\SubscriptionGate::class,
         ]);
 
-        // Yahan TrustProxies add karein
         $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
