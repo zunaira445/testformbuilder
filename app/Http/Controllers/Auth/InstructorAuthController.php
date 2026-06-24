@@ -45,13 +45,20 @@ class InstructorAuthController extends Controller
             'is_email_verified' => false,
         ]);
 
-        // OTP bhejo
-        StudentAuthController::sendOtp($user->email);
+        // OTP bhejo — immediately, no queue
+        $sent = StudentAuthController::sendOtp($user->email);
+
+        if (!$sent) {
+            $user->delete();
+            return back()
+                ->withInput()
+                ->withErrors(['email' => 'We could not send a verification email to this address. Please check the email and try again.']);
+        }
 
         session(['otp_email' => $user->email, 'otp_role' => 'instructor']);
 
         return redirect()->route('otp.verify.form')
-            ->with('info', 'Aapke email par 6-digit OTP bheja gaya hai.');
+            ->with('info', 'A 6-digit verification code has been sent to your email address. Please check your inbox (and spam folder).');
     }
 
     // ── LOGIN ─────────────────────────────────────────────────
@@ -67,7 +74,7 @@ class InstructorAuthController extends Controller
 
             if ($user->role !== 'instructor') {
                 Auth::logout();
-                return back()->withErrors(['email' => 'Invalid credentials for instructor login.']);
+                return back()->withErrors(['email' => 'These credentials are not valid for instructor login.']);
             }
 
             // Email verify check
@@ -76,19 +83,19 @@ class InstructorAuthController extends Controller
                 StudentAuthController::sendOtp($user->email);
                 session(['otp_email' => $user->email, 'otp_role' => 'instructor']);
                 return redirect()->route('otp.verify.form')
-                    ->with('info', 'Pehle apna email verify karein. OTP bheja gaya hai.');
+                    ->with('info', 'Please verify your email first. A new verification code has been sent.');
             }
 
             if (!$user->is_active) {
                 Auth::logout();
-                return back()->withErrors(['email' => 'Your account has been disabled. Contact support.']);
+                return back()->withErrors(['email' => 'Your account has been disabled. Please contact support.']);
             }
 
             $request->session()->regenerate();
             return redirect()->route('instructor.dashboard');
         }
 
-        return back()->withErrors(['email' => 'Email or password is incorrect.']);
+        return back()->withErrors(['email' => 'The email or password is incorrect.']);
     }
 
     // ── LOGOUT ────────────────────────────────────────────────

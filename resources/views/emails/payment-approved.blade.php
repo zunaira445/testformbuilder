@@ -30,7 +30,7 @@
                 <td style="padding:40px 40px 32px;">
                     <p style="margin:0 0 24px;color:#0f172a;font-size:15px;line-height:1.7;">
                         Hello <strong>{{ $payment->user->name }}</strong>,<br>
-                        Great news! Your payment has been verified and your subscription is now <strong style="color:#059669;">active</strong>.
+                        Great news! Your payment has been verified and your <strong style="color:#059669;">{{ $payment->plan->name }} Plan</strong> subscription is now <strong style="color:#059669;">active</strong>.
                         You can now access all features included in your plan.
                     </p>
 
@@ -65,6 +65,55 @@
                                 </td>
                             </tr>
                         </table>
+                    </div>
+
+                    {{-- Plan-specific features --}}
+                    @php
+                        $planName = strtolower($payment->plan->name);
+                        $features = match(true) {
+                            str_contains($planName, 'basic') => [
+                                'Up to 10 Tests per month',
+                                'Up to 100 Students',
+                                'MCQ Builder',
+                                'Basic Timer & Auto-Submit',
+                                'PDF Result Download',
+                            ],
+                            str_contains($planName, 'pro') => [
+                                'Up to 220 Tests per month',
+                                'Up to 250 Students',
+                                'Advanced MCQ Builder',
+                                'Anti-Cheat System',
+                                'Question Bank',
+                                'PDF Export',
+                                'Negative Marking',
+                                'Random Question & Option Order',
+                            ],
+                            str_contains($planName, 'max') => [
+                                'Unlimited Tests',
+                                'Unlimited Students',
+                                'All Pro Features',
+                                'Full Analytics Dashboard',
+                                'Priority Support',
+                                'Custom Branding',
+                                'Bulk Question Import',
+                                'PDF + CSV Export',
+                                'Anti-Cheating Protection (Auto-Ban on Violation)',
+                                'Dedicated Account Manager',
+                            ],
+                            default => ['All plan features are now available to you.'],
+                        };
+                    @endphp
+
+                    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:20px;margin-bottom:24px;">
+                        <h3 style="margin:0 0 12px;color:#1e40af;font-size:14px;font-weight:700;">
+                            ✅ Your {{ $payment->plan->name }} Plan Features:
+                        </h3>
+                        @foreach($features as $feature)
+                        <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;color:#1e3a8a;">
+                            <span style="color:#059669;font-weight:700;">✓</span>
+                            <span>{{ $feature }}</span>
+                        </div>
+                        @endforeach
                     </div>
 
                     @if($payment->admin_note)

@@ -26,8 +26,8 @@ class OtpController extends Controller
         $request->validate([
             'otp' => 'required|string|size:6',
         ], [
-            'otp.required' => 'OTP daalna zaroori hai.',
-            'otp.size'     => 'OTP 6 digits ka hona chahiye.',
+            'otp.required' => 'Please enter the OTP code.',
+            'otp.size'     => 'The OTP must be exactly 6 digits.',
         ]);
 
         $email = session('otp_email');
@@ -35,9 +35,10 @@ class OtpController extends Controller
 
         if (!$email) {
             return redirect()->route('student.login')
-                ->withErrors(['otp' => 'Session expire ho gayi. Dobara login karein.']);
+                ->withErrors(['otp' => 'Your session has expired. Please login again.']);
         }
 
+        // Latest unused, non-expired OTP check (5 minute window)
         $tokenRecord = EmailOtpToken::where('email', $email)
             ->where('used', false)
             ->where('expires_at', '>', now())
@@ -45,7 +46,7 @@ class OtpController extends Controller
             ->first();
 
         if (!$tokenRecord || $tokenRecord->otp !== $request->otp) {
-            return back()->withErrors(['otp' => 'OTP galat hai ya expire ho gaya. Dobara try karein.']);
+            return back()->withErrors(['otp' => 'The OTP is incorrect or has expired. Please request a new one.']);
         }
 
         // OTP mark as used
@@ -55,7 +56,7 @@ class OtpController extends Controller
         $user = User::where('email', $email)->first();
         if (!$user) {
             return redirect()->route('student.login')
-                ->withErrors(['otp' => 'User nahi mila.']);
+                ->withErrors(['otp' => 'No account found with this email.']);
         }
 
         $user->update(['is_email_verified' => true]);
@@ -70,9 +71,9 @@ class OtpController extends Controller
         // Role ke hisaab se redirect
         return match($role) {
             'instructor' => redirect()->route('instructor.dashboard')
-                ->with('success', 'Email verify ho gaya! SWF Portal mein khush aamdeed! 🎉'),
+                ->with('success', 'Email verified successfully! Welcome to SWF Portal! 🎉'),
             default      => redirect()->route('student.dashboard')
-                ->with('success', 'Email verify ho gaya! SWF Portal mein khush aamdeed! 🎉'),
+                ->with('success', 'Email verified successfully! Welcome to SWF Portal! 🎉'),
         };
     }
 
@@ -85,8 +86,12 @@ class OtpController extends Controller
             return redirect()->route('student.login');
         }
 
-        StudentAuthController::sendOtp($email);
+        $sent = StudentAuthController::sendOtp($email);
 
-        return back()->with('info', 'Naya OTP bhej diya gaya hai. Apna email check karein.');
+        if (!$sent) {
+            return back()->withErrors(['otp' => 'Failed to send OTP. Please check your email address or try again.']);
+        }
+
+        return back()->with('info', 'A new verification code has been sent to your email. Please check your inbox and spam folder.');
     }
 }

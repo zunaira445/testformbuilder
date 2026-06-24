@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Mail\PaymentApprovedMail;
 use App\Models\{Payment, UserSubscription};
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class PaymentController extends Controller
@@ -23,7 +24,7 @@ class PaymentController extends Controller
     {
         // Already approved check
         if ($payment->status === 'approved') {
-            return back()->with('error', 'Yeh payment pehle hi approve ho chuki hai.');
+            return back()->with('error', 'This payment has already been approved.');
         }
 
         // Payment approve karo
@@ -47,25 +48,26 @@ class PaymentController extends Controller
             'is_active'            => true,
         ]);
 
-        // User ko email bhejo (fresh reload karo payment)
+        // Payment fresh reload karo with relationships
         $payment->load(['user', 'plan']);
 
+        // Email IMMEDIATELY bhejo — no queue, synchronous
         try {
             Mail::to($payment->user->email)
                 ->send(new PaymentApprovedMail($payment));
         } catch (\Exception $e) {
             // Email fail hone par bhi approve ho jaye — sirf log karo
-            \Log::error('Payment approval email failed: ' . $e->getMessage());
+            Log::error('Payment approval email failed for user ' . $payment->user->email . ': ' . $e->getMessage());
         }
 
-        return back()->with('success', '✅ Payment approve aur subscription activate ho gaya. User ko email bhi bhej di gayi!');
+        return back()->with('success', '✅ Payment approved and subscription activated. A confirmation email has been sent to the user!');
     }
 
     // ── Reject Payment ────────────────────────────────────────
     public function reject(Request $request, Payment $payment)
     {
         if ($payment->status !== 'pending') {
-            return back()->with('error', 'Sirf pending payments reject ki ja sakti hain.');
+            return back()->with('error', 'Only pending payments can be rejected.');
         }
 
         $payment->update([
@@ -73,6 +75,6 @@ class PaymentController extends Controller
             'admin_note' => $request->admin_note,
         ]);
 
-        return back()->with('success', 'Payment reject kar di gayi.');
+        return back()->with('success', 'Payment has been rejected.');
     }
 }

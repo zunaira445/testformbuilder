@@ -51,7 +51,15 @@
                             {{ $otp }}
                         </div>
                         <p style="margin:14px 0 0;color:#64748b;font-size:13px;">
-                            This code is valid for <strong>10 minutes</strong>.
+                            This code is valid for <strong>5 minutes only</strong>. Do not share it with anyone.
+                        </p>
+                    </div>
+
+                    {{-- Spam Note --}}
+                    <div style="background:#f0fdf4;border-left:4px solid #059669;
+                                border-radius:0 8px 8px 0;padding:14px 18px;margin-bottom:18px;">
+                        <p style="margin:0;color:#065f46;font-size:13px;line-height:1.65;">
+                            <strong>📬 Can't find this email?</strong> Check your <strong>Spam</strong> or <strong>Junk</strong> folder and mark it as "Not Spam".
                         </p>
                     </div>
 

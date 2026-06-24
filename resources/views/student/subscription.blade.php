@@ -172,11 +172,23 @@ FILE PATH: resources/views/student/subscription.blade.php
 .faq-item { border-radius: 10px; overflow: hidden; margin-bottom: .5rem; }
 .faq-item .accordion-button { font-weight: 600; font-size: .9rem; }
 .faq-item .accordion-button:not(.collapsed) { background: rgba(30,64,175,.07); color: #1e40af; }
+
+/* ─── PLAN SELECTED HIGHLIGHT ────────────────────────────── */
+#planSelect option:checked { background: #dbeafe; }
+.plan-selected-badge {
+    display: inline-block;
+    background: linear-gradient(135deg,#059669,#047857);
+    color: #fff;
+    border-radius: 20px;
+    padding: .25rem .75rem;
+    font-size: .78rem;
+    font-weight: 700;
+    margin-left: .5rem;
+}
 </style>
 @endpush
 
 @section('content')
-
 
 {{-- ═══════════════════════════════════════════════════════
      PAGE HEADER
@@ -252,7 +264,7 @@ FILE PATH: resources/views/student/subscription.blade.php
         </div>
     </div>
 
-    {{-- ─── PRO (POPULAR) ───────────────────────── --}}
+    {{-- ─── PRO (POPULAR) — UPDATED ─────────────── --}}
     <div class="col-md-4 col-lg-3">
         <div class="plan-card popular h-100 shadow {{ $sub?->plan?->name === 'Pro' ? 'border-success' : '' }}">
             <div class="popular-ribbon">⭐ Most Popular</div>
@@ -278,12 +290,12 @@ FILE PATH: resources/views/student/subscription.blade.php
             </div>
             <div class="plan-features">
                 @foreach([
-                    [true,'Up to 50 Tests per month'],
-                    [true,'Up to 500 Students'],
+                    [true,'Up to 220 Tests per month'],
+                    [true,'Up to 250 Students'],
                     [true,'Advanced MCQ Builder'],
                     [true,'Anti-Cheat System'],
                     [true,'Question Bank'],
-                    [true,'PDF + Excel Export'],
+                    [true,'PDF Export'],
                     [true,'Negative Marking'],
                     [true,'Random Q & Option Order'],
                     [false,'Analytics Dashboard'],
@@ -303,7 +315,7 @@ FILE PATH: resources/views/student/subscription.blade.php
         </div>
     </div>
 
-    {{-- ─── MAX ────────────────────────────────── --}}
+    {{-- ─── MAX — UPDATED ──────────────────────── --}}
     <div class="col-md-4 col-lg-3">
         <div class="plan-card h-100 shadow-sm {{ $sub?->plan?->name === 'Max' ? 'border-success' : '' }}" style="border-color:#7c3aed">
             @if($sub?->plan?->name === 'Max')<div class="current-plan-badge">✓ Current Plan</div>@endif
@@ -335,8 +347,8 @@ FILE PATH: resources/views/student/subscription.blade.php
                     [true,'Priority Support'],
                     [true,'Custom Branding'],
                     [true,'Bulk Question Import'],
-                    [true,'PDF + Excel + CSV Export'],
-                    [true,'API Access'],
+                    [true,'PDF + CSV Export'],
+                    [true,'Anti-Cheating Protection (Auto-Ban on Violation)'],
                     [true,'Dedicated Account Manager'],
                 ] as [$has,$feat])
                 <div class="feature-item">
@@ -457,7 +469,7 @@ FILE PATH: resources/views/student/subscription.blade.php
                 @if(session('payment_success'))
                 <div class="alert alert-success">
                     <i class="bi bi-check-circle-fill me-2"></i>
-                    Payment submitted! Our team will verify and activate your plan within 2–12 hours.
+                    Payment submitted successfully! Our team will verify and activate your plan within 2–12 hours. You will receive a confirmation email once approved.
                 </div>
                 @endif
 
@@ -466,6 +478,16 @@ FILE PATH: resources/views/student/subscription.blade.php
                     <ul class="mb-0">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
                 </div>
                 @endif
+
+                {{-- Selected Plan Banner (shown after clicking Get Plan button) --}}
+                <div id="selectedPlanBanner" class="alert alert-primary d-flex align-items-center gap-2 mb-3" style="display:none!important;border-radius:12px">
+                    <i class="bi bi-check2-circle fs-5"></i>
+                    <div>
+                        <strong>Selected Plan: </strong>
+                        <span id="selectedPlanName" class="fw-bold"></span>
+                        <span class="ms-2 text-muted small" id="selectedPlanPrice"></span>
+                    </div>
+                </div>
 
                 <form method="POST"
                       action="{{ route('payment.submit', 1) }}"
@@ -482,6 +504,7 @@ FILE PATH: resources/views/student/subscription.blade.php
                                 @foreach(\App\Models\SubscriptionPlan::where('is_active',true)->orderBy('price')->get() as $plan)
                                 <option value="{{ $plan->id }}"
                                         data-price="{{ $plan->price }}"
+                                        data-name="{{ $plan->name }}"
                                         {{ old('plan_id') == $plan->id ? 'selected' : '' }}>
                                     {{ $plan->name }} — PKR {{ number_format($plan->price) }}/mo
                                 </option>
@@ -561,7 +584,7 @@ FILE PATH: resources/views/student/subscription.blade.php
                             </button>
                             <p class="text-center text-muted small mt-2 mb-0">
                                 <i class="bi bi-shield-check me-1 text-success"></i>
-                                Your payment will be verified within 2–12 hours. You'll receive a notification once approved.
+                                Your payment will be verified and you will receive a confirmation email once approved.
                             </p>
                         </div>
                     </div>
@@ -627,7 +650,6 @@ function selectBilling(plan, period) {
     if (!monthly || !yearly) return;
     monthly.classList.toggle('active', period === 'monthly');
     yearly.classList.toggle('active',  period === 'yearly');
-    // Update plan button text
     const price = billingPrices[plan]?.[period] ?? 0;
     const btn   = document.querySelector(`[onclick*="openPaymentForm('${plan.charAt(0).toUpperCase()+plan.slice(1)}"]`);
     if (btn) {
@@ -636,36 +658,65 @@ function selectBilling(plan, period) {
     }
 }
 
-/* ─── OPEN PAYMENT FORM ───────────────────────────────────── */
+/* ─── OPEN PAYMENT FORM — FIXED AUTO-SELECT ───────────────── */
 function openPaymentForm(planName, price, period) {
+    // Scroll to form
     document.getElementById('paymentFormSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    // Pre-select the plan in dropdown
+
+    // Auto-select the plan in the dropdown
     const sel = document.getElementById('planSelect');
     if (sel) {
-        for (const opt of sel.options) {
-            if (opt.text.startsWith(planName)) {
-                opt.selected = true;
-                updateAmountPreview(price);
+        let found = false;
+        for (let i = 0; i < sel.options.length; i++) {
+            const opt = sel.options[i];
+            // Match by data-name attribute or text starts with planName
+            if (opt.dataset.name === planName || opt.text.startsWith(planName)) {
+                sel.selectedIndex = i;
+                found = true;
                 break;
             }
         }
+        // Trigger change event to update amount preview
+        sel.dispatchEvent(new Event('change'));
+    }
+
+    // Show selected plan banner
+    const banner = document.getElementById('selectedPlanBanner');
+    const nameEl = document.getElementById('selectedPlanName');
+    const priceEl = document.getElementById('selectedPlanPrice');
+    if (banner && nameEl && priceEl) {
+        nameEl.textContent  = planName + ' Plan';
+        priceEl.textContent = 'PKR ' + price.toLocaleString() + ' / ' + period;
+        banner.style.removeProperty('display');
+        banner.style.display = 'flex';
     }
 }
 
 /* ─── AMOUNT PREVIEW ──────────────────────────────────────── */
 document.getElementById('planSelect')?.addEventListener('change', function() {
-    const price = this.options[this.selectedIndex]?.dataset?.price;
+    const opt   = this.options[this.selectedIndex];
+    const price = opt?.dataset?.price;
+    const name  = opt?.dataset?.name;
     updateAmountPreview(price);
+
+    // Also update banner if visible
+    const banner = document.getElementById('selectedPlanBanner');
+    if (banner && banner.style.display !== 'none' && name) {
+        document.getElementById('selectedPlanName').textContent = name + ' Plan';
+        document.getElementById('selectedPlanPrice').textContent = 'PKR ' + parseFloat(price).toLocaleString() + '/mo';
+    }
 });
 
 function updateAmountPreview(price) {
-    const el  = document.getElementById('amountPreview');
+    const el   = document.getElementById('amountPreview');
     const disp = document.getElementById('amountDisplay');
+    if (!el || !disp) return;
     if (price && parseFloat(price) > 0) {
         el.style.removeProperty('display');
+        el.style.display = 'flex';
         disp.textContent = 'PKR ' + parseFloat(price).toLocaleString();
     } else {
-        el.style.display = 'none !important';
+        el.style.display = 'none';
     }
 }
 
@@ -714,5 +765,14 @@ function copyText(text, spanId) {
         if (el) { el.textContent = 'Copied!'; setTimeout(() => el.textContent = 'Copy', 2000); }
     });
 }
+
+/* ─── ON PAGE LOAD: Restore old selection if validation failed ── */
+document.addEventListener('DOMContentLoaded', () => {
+    const sel = document.getElementById('planSelect');
+    if (sel && sel.value) {
+        const opt = sel.options[sel.selectedIndex];
+        updateAmountPreview(opt?.dataset?.price);
+    }
+});
 </script>
 @endpush

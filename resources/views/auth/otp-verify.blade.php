@@ -154,6 +154,16 @@
         }
         .back-link:hover { color: #64748b; }
 
+        .spam-note {
+            background: #fffbeb;
+            border: 1px solid #fcd34d;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 12px;
+            color: #92400e;
+            margin-bottom: 16px;
+        }
+
         @media (max-width: 480px) {
             .otp-box    { width: 44px; height: 54px; font-size: 22px; }
             .otp-inputs { gap: 7px; }
@@ -194,6 +204,12 @@
         </div>
         @endif
 
+        {{-- Spam note --}}
+        <div class="spam-note">
+            <i class="bi bi-info-circle me-1"></i>
+            <strong>Note:</strong> If you don't see the email in your inbox, please check your <strong>Spam / Junk</strong> folder. The code expires in <strong>5 minutes</strong>.
+        </div>
+
         {{-- Instruction --}}
         <p style="font-size:14px;color:#475569;text-align:center;margin-bottom:14px;line-height:1.6">
             We sent a <strong>6-digit verification code</strong> to:
@@ -220,11 +236,11 @@
                 @endfor
             </div>
 
-            {{-- Timer --}}
+            {{-- Timer — 5 minutes --}}
             <div class="timer-wrap">
                 <i class="bi bi-clock" style="font-size:12px"></i>
                 <span>Code expires in</span>
-                <span id="timerDisplay">10:00</span>
+                <span id="timerDisplay">05:00</span>
             </div>
 
             <button type="submit" class="btn-verify" id="submitBtn" disabled>
@@ -292,7 +308,6 @@ boxes.forEach((box, i) => {
         if (e.key === 'ArrowRight' && i < boxes.length - 1) boxes[i + 1].focus();
     });
 
-    /* Paste handler — works on any box */
     box.addEventListener('paste', e => {
         e.preventDefault();
         const text = (e.clipboardData || window.clipboardData)
@@ -311,8 +326,8 @@ document.getElementById('otpForm').addEventListener('submit', function(e) {
     submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Verifying...';
 });
 
-/* ─── Countdown Timer (10 min) ───────────────────────────── */
-let otpSeconds   = 600;
+/* ─── Countdown Timer (5 min = 300 seconds) ─────────────── */
+let otpSeconds   = 300;
 const timerEl    = document.getElementById('timerDisplay');
 
 const otpTimer = setInterval(() => {
