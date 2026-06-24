@@ -50,5 +50,4 @@ class SubscriptionController extends Controller
         ]);
 
         return back()->with('payment_success', true);
-    }
-}
+        }    }
