@@ -20,9 +20,7 @@
             </form>
         </div>
     </li>
-    <li><a href="{{ route('pricing') }}" class="nav-link">
-        <i class="bi bi-gem me-2"></i> Subscription
-    </a></li>
+    
     <li><a href="{{ route('profile.show') }}" class="nav-link {{ request()->routeIs('profile*') ? 'active':'' }}">
         <i class="bi bi-person-circle me-2"></i> Profile
     </a></li>

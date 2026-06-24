@@ -144,18 +144,7 @@
                     </div>
                     @endif
 
-                    <div class="col-12">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox"
-                                   name="dark_mode" id="darkModeToggle"
-                                   value="1" {{ $user->dark_mode ? 'checked' : '' }}>
-                            <label class="form-check-label fw-semibold" for="darkModeToggle" style="font-size:14px">
-                                <i class="bi bi-moon me-1"></i>Dark Mode
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
+                    
                 <div class="mt-4">
                     <button type="submit" class="btn btn-primary px-4 fw-semibold" style="border-radius:10px">
                         <i class="bi bi-save me-2"></i>Save Changes

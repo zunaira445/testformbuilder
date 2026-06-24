@@ -15,9 +15,7 @@
     <li><a href="{{ route('instructor.analytics') }}" class="nav-link {{ request()->routeIs('instructor.analytics*') ? 'active':'' }}">
         <i class="bi bi-bar-chart-line me-2"></i> Analytics
     </a></li>
-    <li><a href="{{ route('pricing') }}" class="nav-link">
-        <i class="bi bi-gem me-2"></i> Upgrade Plan
-    </a></li>
+    
     <li><a href="{{ route('profile.show') }}" class="nav-link {{ request()->routeIs('profile*') ? 'active':'' }}">
         <i class="bi bi-person-circle me-2"></i> Profile
     </a></li>

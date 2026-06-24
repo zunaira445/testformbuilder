@@ -134,6 +134,41 @@
         /* ── UTILITIES ───────────────────────────────────── */
         .card { border-radius: 12px; }
         .table-responsive { border-radius: 0 0 12px 12px; overflow: hidden; }
+        /* DARK MODE */
+body.dark-mode{
+    background:#0f172a !important;
+    color:#f8fafc !important;
+}
+
+body.dark-mode .topbar{
+    background:#1e293b !important;
+    border-color:#334155 !important;
+}
+
+body.dark-mode .card{
+    background:#1e293b !important;
+    color:#f8fafc !important;
+    border-color:#334155 !important;
+}
+
+body.dark-mode .form-control,
+body.dark-mode .form-select{
+    background:#334155 !important;
+    color:#fff !important;
+    border-color:#475569 !important;
+}
+
+body.dark-mode .table{
+    color:#fff !important;
+}
+
+body.dark-mode .content-area{
+    background:#0f172a !important;
+}
+
+body.dark-mode .text-muted{
+    color:#cbd5e1 !important;
+}
 
         @stack('extra-styles')
     </style>
@@ -210,6 +245,11 @@
             <a href="{{ route('profile.show') }}" class="btn btn-sm btn-light border" style="padding:5px 8px;border-radius:7px" title="Profile">
                 <i class="bi bi-person"></i>
             </a>
+            <button id="darkModeBtn"
+        class="btn btn-sm btn-dark"
+        title="Dark Mode">
+    <i class="bi bi-moon-fill"></i>
+</button>
             <form method="POST" action="{{ route('logout') }}" class="d-inline">
                 @csrf
                 <button type="submit" class="btn btn-sm btn-outline-danger" style="padding:5px 8px;border-radius:7px" title="Logout">
@@ -221,13 +261,7 @@
 
     {{-- Flash Messages --}}
     <div class="content-area pb-0 pt-3">
-        @if(session('success'))
-        <div class="alert alert-success alert-dismissible d-flex align-items-start gap-2 shadow-sm border-0 mb-3">
-            <i class="bi bi-check-circle-fill mt-1 flex-shrink-0"></i>
-            <div class="flex-grow-1">{{ session('success') }}</div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        @endif
+        
         @if(session('error'))
         <div class="alert alert-danger alert-dismissible d-flex align-items-start gap-2 shadow-sm border-0 mb-3">
             <i class="bi bi-exclamation-circle-fill mt-1 flex-shrink-0"></i>
@@ -254,7 +288,27 @@
 <div class="container py-4">@yield('content')</div>
 @endauth
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+const darkBtn = document.getElementById('darkModeBtn');
+
+if(localStorage.getItem('theme') === 'dark'){
+    document.body.classList.add('dark-mode');
+}
+
+darkBtn?.addEventListener('click', () => {
+    document.body.classList.toggle('dark-mode');
+
+    if(document.body.classList.contains('dark-mode')){
+        localStorage.setItem('theme','dark');
+    } else {
+        localStorage.setItem('theme','light');
+    }
+});
+</script>
+</script>
 @stack('scripts')
 </body>
 </html>

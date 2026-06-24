@@ -56,12 +56,13 @@
                     </div>
                     <div class="mb-2">
                         <label class="form-label small fw-semibold">Category</label>
-                        <select name="category_id" class="form-select form-select-sm">
-                            <option value="">-- None --</option>
-                            @foreach($categories as $cat)
-                                <option value="{{ $cat->id }}" {{ $test->category_id==$cat->id?'selected':'' }}>{{ $cat->name }}</option>
-                            @endforeach
-                        </select>
+
+<input
+    type="text"
+    name="category"
+    class="form-control form-control-sm"
+    value="{{ $test->category }}"
+    placeholder="Enter category">
                     </div>
                     <div class="mb-2">
                         <label class="form-label small fw-semibold">Duration (min)</label>
